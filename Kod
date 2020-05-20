@@ -1,0 +1,183 @@
+import java.util.*;
+
+public class Minefield {
+
+    private static final int COLS = 11;
+    private static final int ROWS = (COLS+1)/2; // 6
+    private static final int NUM_MINES = (COLS+ROWS)/3;
+    private static boolean[][] posIsMine = new boolean[ROWS+2][COLS+2];
+    private static char[][] mineField = new char[ROWS+2][COLS+2];
+    private static char[][] instantReplay = new char[ROWS+2][COLS+2];
+    private static final int[] START_LOC = {ROWS, 0};
+    private static final int[] EXIT_LOC = {1, COLS+1};
+    private static int[] botLocation;
+    private static boolean engineRunning = false;
+
+
+
+    public static void main(String[] args) {
+        Scanner scan = new Scanner(System.in);
+
+        populateMinefield(mineField);
+
+        do {
+            botLocation = Arrays.copyOf(START_LOC, 2);
+            engineRunning = false;
+            for (int row = 0; row < mineField.length; row++) {
+                for (int col = 0; col < mineField[0].length; col++) {
+                    instantReplay[row][col] = mineField[row][col];
+                }
+            }
+
+            displayMineField(mineField);
+
+            String commands = scan.nextLine().toUpperCase();
+
+            evaluateCommands(commands);
+            displayMineField(instantReplay);
+
+            if (posIsMine[botLocation[0]][botLocation[1]]) {
+                System.out.println("You were destroyed by a mine at: " + Arrays.toString(botLocation));
+            } else if (Arrays.equals(botLocation, START_LOC)) {
+                System.out.println("You didn't move...");
+            }
+        } while (!Arrays.equals(botLocation, EXIT_LOC) || engineRunning);
+        System.out.println("You made it to the exit!");
+    }
+
+    private static void evaluateCommands(String commands) {
+
+        for (int charPoint = 0; charPoint < commands.length(); charPoint++) {
+            if (!engineRunning) {
+                if (commands.charAt(charPoint) == 'I') {
+                    engineRunning = true;
+                }
+            } else { 
+                if (commands.charAt(charPoint) == 'N') {
+                    if (botLocation[0] > 1 && botLocation[1] > 0 && botLocation[1] <= COLS) { // not wall
+                        instantReplay[botLocation[0]][botLocation[1]] = ' ';
+                        botLocation[0] -= 1;
+                        if (posIsMine[botLocation[0]][botLocation[1]]) {
+                            return;
+                        }
+                        instantReplay[botLocation[0]][botLocation[1]] = 'M';
+                    }
+                } else if (commands.charAt(charPoint) == 'S') {
+                    if (botLocation[0] < ROWS && botLocation[1] > 0 && botLocation[1] <= COLS) { // not wall
+                        instantReplay[botLocation[0]][botLocation[1]] = ' ';
+                        botLocation[0] += 1;
+                        if (posIsMine[botLocation[0]][botLocation[1]]) {
+                            return;
+                        }
+                        instantReplay[botLocation[0]][botLocation[1]] = 'M';
+
+                    }
+                } else if (commands.charAt(charPoint) == 'E') {
+                    if (((botLocation[0] == EXIT_LOC[0] && botLocation[1] < EXIT_LOC[1]) || botLocation[1] < COLS) && botLocation[0] > 0 && botLocation[0] <= ROWS) { // not wall
+                        instantReplay[botLocation[0]][botLocation[1]] = ' ';
+                        botLocation[1] += 1;
+                        if (posIsMine[botLocation[0]][botLocation[1]]) {
+                            return;
+                        }
+                        instantReplay[botLocation[0]][botLocation[1]] = 'M';
+                    }
+                } else if (commands.charAt(charPoint) == 'O') {
+                    if (botLocation[1] > 1 && botLocation[0] > 0 && botLocation[0] <= ROWS) { // not wall
+                        instantReplay[botLocation[0]][botLocation[1]] = ' ';
+                        botLocation[1] -= 1;
+                        if (posIsMine[botLocation[0]][botLocation[1]]) {
+                            return;
+                        }
+                        instantReplay[botLocation[0]][botLocation[1]] = 'M';
+                    }
+                } else if (commands.charAt(charPoint) == '-') {
+                    engineRunning = false;
+                    if (Arrays.equals(botLocation, EXIT_LOC)) {
+                        return;
+                    }
+                }
+            }
+        }
+        return;
+    }
+
+    private static void populateMinefield(char[][] field) {
+
+        for (int col = 0; col < field[0].length; col++) {
+            field[0][col] = '+';
+        }
+        for (int col = 0; col < field[ROWS+1].length; col++) {
+            field[ROWS+1][col] = '+';
+        }
+
+        for (int mine = 1; mine <= NUM_MINES; mine++) {
+            Random r = new Random();
+            int[] minePos = {r.nextInt(ROWS)+1, r.nextInt(COLS)+1};
+
+            
+            while ((mineField[minePos[0]][minePos[1]] != '\0'
+                    || (minePos[1] < COLS && mineField[minePos[0]][minePos[1]+1] != '\0')
+                    || (minePos[1] > 1 && mineField[minePos[0]][minePos[1]-1] != '\0')
+                    || (minePos[1] < COLS-2 && mineField[minePos[0]][minePos[1]+2] != '\0')
+                    || (minePos[1] > 2 && mineField[minePos[0]][minePos[1]-2] != '\0'))
+
+                    || (minePos[0] < ROWS && (mineField[minePos[0]+1][minePos[1]] != '\0'
+                            || (minePos[1] < COLS && mineField[minePos[0]+1][minePos[1]+1] != '\0')
+                            || (minePos[1] > 1 && mineField[minePos[0]+1][minePos[1]-1] != '\0')
+                            || (minePos[1] < COLS-2 && mineField[minePos[0]+1][minePos[1]+2] != '\0')
+                            || (minePos[1] > 2 && mineField[minePos[0]+1][minePos[1]-2] != '\0')))
+
+                    || (minePos[0] < ROWS-1 && (mineField[minePos[0]+2][minePos[1]] != '\0'
+                            || (minePos[1] < COLS && mineField[minePos[0]+2][minePos[1]+1] != '\0')
+                            || (minePos[1] > 1 && mineField[minePos[0]+2][minePos[1]-1] != '\0')
+                            || (minePos[1] < COLS-2 && mineField[minePos[0]+2][minePos[1]+2] != '\0')
+                            || (minePos[1] > 2 && mineField[minePos[0]+2][minePos[1]-2] != '\0')))
+
+                    || (minePos[0] > 1 && (mineField[minePos[0]-1][minePos[1]] != '\0'
+                            || (minePos[1] < COLS && mineField[minePos[0]-1][minePos[1]+1] != '\0')
+                            || (minePos[1] > 1 && mineField[minePos[0]-1][minePos[1]-1] != '\0')
+                            || (minePos[1] < COLS-2 && mineField[minePos[0]-1][minePos[1]+2] != '\0')
+                            || (minePos[1] > 2 && mineField[minePos[0]-1][minePos[1]-2] != '\0')))
+
+                    || (minePos[0] > 2 && (mineField[minePos[0]-2][minePos[1]] != '\0'
+                            || (minePos[1] < COLS && mineField[minePos[0]-2][minePos[1]+1] != '\0')
+                            || (minePos[1] > 1 && mineField[minePos[0]-2][minePos[1]-1] != '\0')
+                            || (minePos[1] < COLS-2 && mineField[minePos[0]-2][minePos[1]+2] != '\0')
+                            || (minePos[1] > 2 && mineField[minePos[0]-2][minePos[1]-2] != '\0')))
+
+                    || (minePos[0] == START_LOC[0] && minePos[1] == START_LOC[1]+1)
+                    || (minePos[0] == EXIT_LOC[0] && minePos[1] == EXIT_LOC[1]-1)) {
+
+                minePos[0] = r.nextInt(ROWS)+1;
+                minePos[1] = r.nextInt(COLS)+1;
+            }
+            posIsMine[minePos[0]][minePos[1]] = true;
+            mineField[minePos[0]][minePos[1]] = '*';
+        }
+       
+
+        for (int row = 1; row < ROWS+1; row++) {
+            for (int col = 0; col < COLS+2; col++) {
+                if (col == 0 || col == COLS+1) {
+                    field[row][col] = '+';
+                } else {
+                    if (field[row][col] == 0 || field[row][col] == ' ' || field[row][col] == 'M') {
+                        field[row][col] = '0';
+                    } 
+                }
+            }
+        }
+        field[START_LOC[0]][START_LOC[1]] = 'M';
+        field[EXIT_LOC[0]][EXIT_LOC[1]] = '0';
+      
+    }
+
+    private static void displayMineField(char[][] field) {
+        for (int row = 0; row < field.length; row++) {
+            for (char c : field[row]) {
+                System.out.print(c);
+            }
+            System.out.print('\n');
+        }
+    }
+}
